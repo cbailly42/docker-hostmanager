@@ -116,13 +116,6 @@ class Synchronizer
     {
         $lines = [];
 
-        // Global
-        if (!empty($container['NetworkSettings']['IPAddress'])) {
-            $ip = $container['NetworkSettings']['IPAddress'];
-
-            $lines[$ip] = implode(' ', $this->getContainerHosts($container));
-        }
-
         // Networks
         if (isset($container['NetworkSettings']['Networks']) && is_array($container['NetworkSettings']['Networks'])) {
             foreach ($container['NetworkSettings']['Networks'] as $networkName => $conf) {
@@ -136,7 +129,11 @@ class Synchronizer
                     $hosts[] = $alias.'.'.$networkName;
                 }
 
-                $lines[$ip] = sprintf('%s%s', isset($lines[$ip]) ? $lines[$ip].' ' : '', implode(' ', $hosts));
+                foreach ($this->getContainerHosts($container) as $host) {
+                    $hosts[] = $host;
+                }
+
+                $lines[$ip] = sprintf('%s%s', isset($lines[$ip]) ? $lines[$ip].' ' : '', implode(' ', array_unique($hosts)));
             }
         }
 
@@ -155,6 +152,7 @@ class Synchronizer
     private function getContainerHosts($container)
     {
         $hosts = [substr($container['Name'], 1).$this->tld];
+
         if (isset($container['Config']['Env']) && is_array($container['Config']['Env'])) {
             $env = $container['Config']['Env'];
             foreach (preg_grep('/DOMAIN_NAME=/', $env) as $row) {
